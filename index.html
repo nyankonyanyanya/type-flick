@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>フリック練習</title>
+<style>
+:root{--bg:#f6f7fb;--fg:#1c1d22;--card:#fff;--key:#fff;--key2:#e4e7ef;--line:#d3d7e2;--acc:#3b6cf6;--ok:#1a9d5a;--ng:#d6372f;--mut:#6b7080;color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#14151a;--fg:#eceef5;--card:#1c1e26;--key:#262933;--key2:#343846;--line:#3a3e4c;--acc:#6b93ff;--ok:#4cd08a;--ng:#ff7a72;--mut:#9aa0b2;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#14151a;--fg:#eceef5;--card:#1c1e26;--key:#262933;--key2:#343846;--line:#3a3e4c;--acc:#6b93ff;--ok:#4cd08a;--ng:#ff7a72;--mut:#9aa0b2;color-scheme:dark}
+html{height:100%;scroll-padding-top:env(safe-area-inset-top,0px)}
+body{height:100%;margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;overscroll-behavior:none}
+[hidden]{display:none!important}
+#block{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;gap:10px;box-sizing:border-box}
+#block b{font-size:24px}
+#block span{color:var(--mut)}
+#app{height:100%;display:flex;flex-direction:column;max-width:520px;margin:0 auto}
+header{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;font-size:15px;color:var(--mut)}
+header .n{font-weight:700;font-size:22px;color:var(--fg);font-variant-numeric:tabular-nums}
+.sk{background:transparent;border:1px solid var(--line);color:var(--mut);border-radius:8px;padding:6px 12px;font:inherit;font-size:14px}
+main{flex:1;position:relative;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:16px;padding:0 16px;text-align:center}
+#target{font-size:clamp(34px,11vw,56px);font-weight:700;letter-spacing:.04em}
+#target .d{color:var(--ok)}
+#input{min-height:1.6em;min-width:60%;font-size:30px;border-bottom:2px solid var(--line)}
+#input.ng{color:var(--ng)}
+#pad{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:8px 8px 12px;background:var(--card);border-top:1px solid var(--line)}
+.k{height:clamp(52px,8.5vh,66px);border:1px solid var(--line);border-radius:10px;background:var(--key);color:var(--fg);font:inherit;font-size:22px;display:flex;align-items:center;justify-content:center;touch-action:none;padding:0}
+.k.f{background:var(--key2);font-size:17px}
+.k.on{background:var(--acc);color:#fff;border-color:var(--acc)}
+#guide{position:fixed;display:grid;pointer-events:none;z-index:9}
+#guide i{font-style:normal;display:flex;align-items:center;justify-content:center;font-size:24px;background:var(--key2);color:var(--fg);border-radius:10px;box-shadow:0 4px 14px rgba(0,0,0,.35)}
+#guide i.on{background:var(--acc);color:#fff}
+#ov{position:absolute;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;z-index:5;padding:24px}
+#ov h1{margin:0;font-size:28px}
+#ov p{margin:0;color:var(--mut);line-height:1.6}
+.btn{background:var(--acc);color:#fff;border:0;border-radius:12px;padding:14px 40px;font:inherit;font-size:18px;font-weight:700}
+</style>
+</head>
+<body>
+<div id="block" hidden>
+  <div style="font-size:48px">📱</div>
+  <b>スマホで開いてください</b>
+  <span>このサイトはスマートフォン専用です。<br>スマホのブラウザからアクセスしてください。</span>
+</div>
+<div id="app" hidden>
+  <header>
+    <div>残り <span class="n" id="time">60</span> 秒</div>
+    <div><span class="n" id="score">0</span> 語</div>
+    <button class="sk" id="skip" type="button">スキップ</button>
+  </header>
+  <main>
+    <div id="target"></div>
+    <div id="input"></div>
+    <div id="ov">
+      <h1 id="ovt">フリック練習</h1>
+      <p id="ovp">お題をフリック入力で打とう。<br>60秒で何語打てるか挑戦！</p>
+      <button class="btn" id="go" type="button">スタート</button>
+    </div>
+  </main>
+  <div id="pad"></div>
+</div>
+<div id="guide" hidden></div>
+<noscript><p style="padding:24px">JavaScriptを有効にしてください。</p></noscript>
+<script>
+(function(){
+var $=function(id){return document.getElementById(id)};
+var ua=navigator.userAgent||"";
+var ok=/iPhone|iPod|Android.*Mobile|Windows Phone/i.test(ua)||
+  (window.matchMedia&&matchMedia("(pointer:coarse)").matches&&Math.min(screen.width,screen.height)<=820);
+if(!ok){$("block").hidden=false;return;}
+$("app").hidden=false;
+
+var WORDS=["さくら","ねこ","いぬ","やま","かわ","うみ","そら","はな","ほし","つき","ひかり","すいか","みかん","りんご","ともだち","がっこう","ありがとう","おはよう","こんにちは","ゆうやけ","でんしゃ","ぱんだ","らーめん","ふゆやすみ","あさごはん","たのしい","ぼうし","ひこうき","じてんしゃ","おんがく","ゆきだるま"];
+var GROUPS=["かが","きぎ","くぐ","けげ","こご","さざ","しじ","すず","せぜ","そぞ","ただ","ちぢ","つっづ","てで","とど","はばぱ","ひびぴ","ふぶぷ","へべぺ","ほぼぽ","あぁ","いぃ","うぅ","えぇ","おぉ","やゃ","ゆゅ","よょ","わゎ"];
+// [中央, 左, 上, 右, 下]
+var LAYOUT=[
+ ["あ","い","う","え","お"],["か","き","く","け","こ"],["さ","し","す","せ","そ"],
+ ["た","ち","つ","て","と"],["な","に","ぬ","ね","の"],["は","ひ","ふ","へ","ほ"],
+ ["ま","み","む","め","も"],["や","「","ゆ","」","よ"],["ら","り","る","れ","ろ"],
+ "small",["わ","を","ん","ー",""],"back"
+];
+
+var target="",input="",score=0,playing=false,last=-1,endAt=0,timer=null,best=0;
+try{best=+localStorage.getItem("flickBest")||0}catch(e){}
+
+function render(){
+  var pre=target.indexOf(input)===0;
+  var h="";
+  for(var i=0;i<target.length;i++){
+    h+=(pre&&i<input.length)?'<span class="d">'+target[i]+'</span>':target[i];
+  }
+  $("target").innerHTML=h;
+  $("input").textContent=input;
+  $("input").className=pre?"":"ng";
+}
+function nextWord(){
+  var i;do{i=Math.floor(Math.random()*WORDS.length)}while(i===last);
+  last=i;target=WORDS[i];input="";render();
+}
+function add(ch){
+  if(!playing||!ch)return;
+  input+=ch;render();
+  if(input===target){score++;$("score").textContent=score;nextWord();}
+}
+function cycle(){
+  if(!playing||!input)return;
+  var c=input.slice(-1);
+  for(var i=0;i<GROUPS.length;i++){
+    var p=GROUPS[i].indexOf(c);
+    if(p>=0){input=input.slice(0,-1)+GROUPS[i][(p+1)%GROUPS[i].length];render();
+      if(input===target){score++;$("score").textContent=score;nextWord();}
+      return;}
+  }
+}
+function back(){if(!playing)return;input=input.slice(0,-1);render();}
+
+var guide=$("guide"),cells=[];
+var POS=[[2,2],[1,2],[2,1],[3,2],[2,3]]; // [col,row]
+function showGuide(b,chars){
+  var r=b.getBoundingClientRect(),w=r.width,h=r.height;
+  guide.innerHTML="";cells=[];
+  for(var i=0;i<5;i++){
+    var c=document.createElement("i");
+    c.textContent=chars[i];
+    c.style.gridColumn=POS[i][0];c.style.gridRow=POS[i][1];
+    if(!chars[i])c.style.visibility="hidden";
+    guide.appendChild(c);cells.push(c);
+  }
+  guide.style.gridTemplateColumns="repeat(3,"+w+"px)";
+  guide.style.gridTemplateRows="repeat(3,"+h+"px)";
+  var l=r.left+w/2-1.5*w,t=r.top+h/2-1.5*h;
+  l=Math.max(4,Math.min(innerWidth-3*w-4,l));
+  t=Math.max(4,Math.min(innerHeight-3*h-4,t));
+  guide.style.left=l+"px";guide.style.top=t+"px";
+  guide.hidden=false;hl(0);
+}
+function hl(d){cells.forEach(function(c,i){c.classList.toggle("on",i===d)})}
+function dirOf(dx,dy){
+  if(Math.hypot(dx,dy)<22)return 0;
+  if(Math.abs(dx)>Math.abs(dy))return dx<0?1:3;
+  return dy<0?2:4;
+}
+
+var pad=$("pad");
+LAYOUT.forEach(function(item){
+  var b=document.createElement("button");
+  b.type="button";b.className="k";
+  if(typeof item==="string"){
+    b.className+=" f";
+    b.textContent=item==="small"?"゛゜小":"⌫";
+    b.addEventListener("pointerdown",function(e){
+      e.preventDefault();b.classList.add("on");
+      item==="small"?cycle():back();
+    });
+    var off=function(){b.classList.remove("on")};
+    b.addEventListener("pointerup",off);b.addEventListener("pointercancel",off);b.addEventListener("pointerleave",off);
+  }else{
+    b.textContent=item[0];
+    var sx=0,sy=0,cur=0,down=false;
+    b.addEventListener("pointerdown",function(e){
+      if(!playing)return;
+      e.preventDefault();
+      try{b.setPointerCapture(e.pointerId)}catch(x){}
+      sx=e.clientX;sy=e.clientY;cur=0;down=true;
+      b.classList.add("on");showGuide(b,item);
+    });
+    b.addEventListener("pointermove",function(e){
+      if(!down)return;
+      var d=dirOf(e.clientX-sx,e.clientY-sy);
+      if(d!==cur){cur=d;hl(d);}
+    });
+    b.addEventListener("pointerup",function(){
+      if(!down)return;down=false;
+      guide.hidden=true;b.classList.remove("on");
+      add(item[cur]);
+    });
+    b.addEventListener("pointercancel",function(){
+      down=false;guide.hidden=true;b.classList.remove("on");
+    });
+  }
+  pad.appendChild(b);
+});
+pad.addEventListener("contextmenu",function(e){e.preventDefault()});
+
+function tick(){
+  var s=Math.max(0,Math.ceil((endAt-Date.now())/1000));
+  $("time").textContent=s;
+  if(s<=0)finish();
+}
+function start(){
+  score=0;$("score").textContent=0;$("time").textContent=60;
+  playing=true;$("ov").hidden=true;
+  endAt=Date.now()+60000;
+  clearInterval(timer);timer=setInterval(tick,200);
+  nextWord();
+}
+function finish(){
+  playing=false;clearInterval(timer);guide.hidden=true;
+  var newBest=score>best;
+  if(newBest){best=score;try{localStorage.setItem("flickBest",String(best))}catch(e){}}
+  $("ovt").textContent="終了！ "+score+" 語";
+  $("ovp").innerHTML=(newBest?"自己ベスト更新！":"最高記録："+best+" 語")+"<br>もう一度挑戦する？";
+  $("go").textContent="もう一度";
+  $("ov").hidden=false;
+}
+$("go").addEventListener("click",start);
+$("skip").addEventListener("click",function(){if(playing)nextWord()});
+target="フリック";render();
+})();
+</script>
+</body>
+</html>
